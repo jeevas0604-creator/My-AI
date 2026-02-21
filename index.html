@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>My AI</title>
+<link rel="manifest" href="manifest.json"/>
+<meta name="theme-color" content="#080808"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Bebas+Neue&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--accent:#ff6eb4;--bg:#0d0a12;--surface:#140d1c}
+html,body{height:100%;overflow:hidden;font-family:'Space Mono',monospace;background:var(--bg);color:#f0f0f0}
+#app{height:100vh;display:flex;flex-direction:column;overflow:hidden}
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:10px}
+textarea{resize:none;font-family:'Space Mono',monospace}
+input,textarea,button{font-family:'Space Mono',monospace}
+
+/* Setup */
+#setup{
+  position:fixed;inset:0;background:#060608;
+  display:flex;align-items:center;justify-content:center;
+  z-index:100;
+  background-image:radial-gradient(ellipse at 50% 30%,rgba(167,139,250,0.12) 0%,transparent 60%);
+}
+.setup-inner{text-align:center;padding:40px 24px;max-width:400px;width:100%}
+.setup-emoji{font-size:56px;margin-bottom:16px}
+.setup-title{font-family:'Bebas Neue';font-size:52px;letter-spacing:8px;color:#fff;line-height:1}
+.setup-sub{font-size:10px;letter-spacing:5px;color:rgba(255,255,255,0.3);margin:8px 0 48px}
+.setup-label{font-size:11px;color:rgba(255,255,255,0.4);letter-spacing:2px;margin-bottom:16px}
+.setup-input{
+  width:100%;padding:16px;background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.1);color:#fff;font-size:18px;
+  outline:none;text-align:center;margin-bottom:12px;border-radius:4px;
+}
+.setup-btn{
+  width:100%;padding:16px;background:#a78bfa;border:none;color:#fff;
+  font-family:'Bebas Neue';font-size:22px;letter-spacing:5px;cursor:pointer;border-radius:4px;
+}
+.setup-note{font-size:9px;color:rgba(255,255,255,0.2);letter-spacing:2px;margin-top:24px;line-height:2}
+
+/* Header */
+#header{
+  padding:12px 16px;display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid rgba(255,255,255,0.05);background:var(--surface);flex-shrink:0;
+}
+#app-title{font-family:'Bebas Neue';font-size:20px;letter-spacing:4px;color:var(--accent)}
+#mem-flash{font-size:9px;letter-spacing:2px;color:var(--accent);opacity:0;transition:opacity 0.3s;margin-left:10px}
+#header-right{display:flex;gap:8px;align-items:center}
+#stats{font-size:9px;letter-spacing:2px;color:rgba(255,255,255,0.2)}
+#tab-btn{
+  background:transparent;border:1px solid rgba(255,255,255,0.08);
+  color:rgba(255,255,255,0.3);font-size:9px;letter-spacing:2px;
+  padding:6px 10px;cursor:pointer;
+}
+
+/* Modes */
+#modes{
+  display:flex;gap:2px;padding:6px 10px;
+  background:var(--surface);border-bottom:1px solid rgba(255,255,255,0.04);flex-shrink:0;
+}
+.mode-btn{
+  flex:1;padding:8px 4px;background:transparent;
+  border:1px solid transparent;color:rgba(255,255,255,0.25);
+  font-size:8px;letter-spacing:2px;cursor:pointer;transition:all 0.18s;
+}
+.mode-btn.active{border-color:rgba(255,255,255,0.3)}
+.mode-icon{font-size:15px;margin-bottom:2px;display:block}
+
+/* Chat */
+#chat-area{flex:1;overflow-y:auto;padding:20px 16px;transition:opacity 0.2s}
+.empty-state{
+  height:100%;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  color:rgba(255,255,255,0.12);text-align:center;padding:40px;
+}
+.empty-emoji{font-size:44px}
+.empty-mode{font-family:'Bebas Neue';font-size:26px;letter-spacing:5px;margin:10px 0 8px}
+.empty-tag{font-size:10px;letter-spacing:3px;line-height:2}
+.mem-badge{
+  margin-top:20px;padding:10px 16px;
+  border-radius:20px;font-size:9px;letter-spacing:2px;
+}
+.msg-row{display:flex;margin-bottom:14px;animation:msgIn 0.2s ease}
+.msg-row.user{justify-content:flex-end}
+.msg-row.ai{justify-content:flex-start}
+.msg-avatar{
+  width:26px;height:26px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;margin-right:8px;flex-shrink:0;margin-top:4px;
+}
+.msg-bubble{
+  max-width:75%;padding:10px 14px;font-size:13px;
+  line-height:1.7;word-break:break-word;white-space:pre-wrap;
+}
+.msg-bubble.user{border-radius:12px 12px 3px 12px}
+.msg-bubble.ai{border-radius:12px 12px 12px 3px;color:rgba(255,255,255,0.85)}
+.typing{display:flex;gap:6px;align-items:center;padding:12px 16px}
+.dot{width:5px;height:5px;border-radius:50%;opacity:0.6}
+
+/* Input */
+#input-area{
+  padding:12px 16px;border-top:1px solid rgba(255,255,255,0.05);
+  flex-shrink:0;
+}
+.input-row{display:flex;gap:8px;align-items:flex-end}
+#msg-input{
+  flex:1;background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.07);
+  border-radius:8px;padding:11px 14px;
+  color:#fff;font-size:13px;outline:none;
+  transition:border 0.2s;max-height:100px;overflow-y:auto;
+  line-height:1.6;
+}
+#send-btn{
+  padding:11px 18px;background:rgba(255,255,255,0.05);
+  border:none;border-radius:8px;cursor:pointer;
+  color:rgba(255,255,255,0.2);font-size:16px;transition:all 0.2s;flex-shrink:0;
+}
+#send-btn.active{color:#fff}
+.input-footer{
+  font-size:8px;color:rgba(255,255,255,0.12);letter-spacing:2px;
+  margin-top:6px;display:flex;justify-content:space-between;
+}
+#clear-btn{
+  background:transparent;border:none;color:rgba(255,255,255,0.15);
+  font-size:8px;letter-spacing:2px;cursor:pointer;padding:0;
+}
+
+/* Memory tab */
+#memory-tab{flex:1;overflow-y:auto;padding:24px 20px;display:none;animation:fadeIn 0.2s ease}
+.mem-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+.mem-title{font-family:'Bebas Neue';font-size:28px;letter-spacing:5px}
+#clear-mem-btn{
+  background:transparent;border:1px solid rgba(255,100,100,0.2);
+  color:rgba(255,100,100,0.5);font-size:8px;letter-spacing:2px;
+  padding:6px 12px;cursor:pointer;
+}
+.mem-empty{text-align:center;color:rgba(255,255,255,0.15);padding:60px 0}
+.mem-empty-icon{font-size:40px;margin-bottom:12px}
+.mem-empty-text{font-size:11px;letter-spacing:3px;line-height:2}
+.mem-cards{display:flex;flex-direction:column;gap:16px}
+.mem-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);padding:16px 20px;border-radius:8px}
+.mem-card-label{font-size:9px;letter-spacing:3px;margin-bottom:8px}
+.mem-card-val{font-size:13px;color:rgba(255,255,255,0.75);line-height:1.7}
+.facts-list{display:flex;flex-direction:column}
+.fact-item{font-size:12px;color:rgba(255,255,255,0.7);padding:7px 0;line-height:1.6}
+.fact-item:not(:last-child){border-bottom:1px solid rgba(255,255,255,0.05)}
+
+@keyframes msgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
+@keyframes memFlash{0%,100%{opacity:0}40%,60%{opacity:1}}
+</style>
+</head>
+<body>
+
+<!-- SETUP SCREEN -->
+<div id="setup">
+  <div class="setup-inner">
+    <div class="setup-emoji">✨</div>
+    <div class="setup-title">YOUR AI</div>
+    <div class="setup-sub">BUILT FOR YOU. ONLY YOU.</div>
+    <p class="setup-label">WHAT DO I CALL YOU?</p>
+    <input class="setup-input" id="name-input" type="text" placeholder="your name..." autocomplete="off"/>
+    <button class="setup-btn" onclick="saveName()">LET'S GO →</button>
+    <p class="setup-note">YOUR DATA IS YOURS ALONE.<br/>STORED ON YOUR DEVICE ONLY.</p>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app" style="display:none">
+  <div id="header">
+    <div style="display:flex;align-items:center">
+      <div id="app-title">MY AI</div>
+      <div id="mem-flash">⚡ MEMORY SAVED</div>
+    </div>
+    <div id="header-right">
+      <div id="stats">0 facts · 0 msgs</div>
+      <button id="tab-btn" onclick="toggleTab()">MEMORY</button>
+    </div>
+  </div>
+
+  <div id="modes">
+    <button class="mode-btn active" data-mode="bestie" onclick="switchMode('bestie')">
+      <span class="mode-icon">💬</span>BESTIE
+    </button>
+    <button class="mode-btn" data-mode="journal" onclick="switchMode('journal')">
+      <span class="mode-icon">🌙</span>JOURNAL
+    </button>
+    <button class="mode-btn" data-mode="coach" onclick="switchMode('coach')">
+      <span class="mode-icon">🎯</span>COACH
+    </button>
+    <button class="mode-btn" data-mode="roast" onclick="switchMode('roast')">
+      <span class="mode-icon">💀</span>CHAOS
+    </button>
+  </div>
+
+  <!-- CHAT TAB -->
+  <div id="chat-area"></div>
+
+  <!-- MEMORY TAB -->
+  <div id="memory-tab">
+    <div class="mem-header">
+      <div class="mem-title" id="mem-title">WHAT I KNOW ABOUT YOU</div>
+      <button id="clear-mem-btn" onclick="clearMemory()">CLEAR ALL</button>
+    </div>
+    <div id="mem-content"></div>
+  </div>
+
+  <!-- INPUT -->
+  <div id="input-area">
+    <div class="input-row">
+      <textarea id="msg-input" rows="1" placeholder="hey bestie, spill..." oninput="onInput(this)" onkeydown="onKey(event)"></textarea>
+      <button id="send-btn" onclick="sendMessage()">→</button>
+    </div>
+    <div class="input-footer">
+      <span>ENTER TO SEND</span>
+      <button id="clear-btn" onclick="clearChat()">CLEAR CHAT</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── SERVICE WORKER ───────────────────────────────────────────────────────────
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  });
+}
+
+// ── CONFIG ──────────────────────────────────────────────────────────────────
+const MODES = {
+  bestie:{id:'bestie',label:'BESTIE',emoji:'💬',accent:'#ff6eb4',bg:'#0d0a12',surface:'#140d1c',placeholder:'hey bestie, spill...',tagline:'YOUR RIDE OR DIE 💕',system:`You are the user's AI bestie — warm, funny, real, deeply caring. Talk like a close friend: casual, no filter, lots of personality. Hype them up, listen to their vents, always keep it 100. Use casual language, light humor. Refer to past memories naturally. Never sound robotic.`},
+  journal:{id:'journal',label:'JOURNAL',emoji:'🌙',accent:'#a78bfa',bg:'#080810',surface:'#0e0e1f',placeholder:"what's on your mind today...",tagline:'A SAFE SPACE TO THINK 🌙',system:`You are a compassionate AI journal companion and soft therapist. Help the user process their thoughts and feelings. Ask thoughtful follow-up questions. Reflect back what you hear. Offer gentle insights without diagnosing. Keep responses calm and introspective. End with a reflective question.`},
+  coach:{id:'coach',label:'COACH',emoji:'🎯',accent:'#00e5a0',bg:'#050e0a',surface:'#091a10',placeholder:'what are we building today...',tagline:"LET'S GET TO WORK 🔥",system:`You are a sharp, no-nonsense life coach AI. Help the user set goals, break them into actions, build accountability. Be direct, strategic, and motivating. Call out excuses gently but firmly. Celebrate wins. Always ask "what's the next small step?"`},
+  roast:{id:'roast',label:'CHAOS',emoji:'💀',accent:'#ff4500',bg:'#0f0500',surface:'#1a0800',placeholder:'come on, tell me something...',tagline:'WE GO HARD OR GO HOME 💀',system:`You alternate between roasting and hyping the user — read the room. If they share something cringe, roast them playfully (never mean, always funny). If they share a win, HYPE THEM UP with maximum energy. Be unhinged in a fun way. Use caps for emphasis.`}
+};
+
+// ── STATE ───────────────────────────────────────────────────────────────────
+let currentMode = 'bestie';
+let userName = '';
+let profile = {};
+let messages = {bestie:[],journal:[],coach:[],roast:[]};
+let isLoading = false;
+let currentTab = 'chat';
+
+// ── STORAGE ──────────────────────────────────────────────────────────────────
+function lsGet(k){try{return localStorage.getItem(k)}catch{return null}}
+function lsSet(k,v){try{localStorage.setItem(k,typeof v==='string'?v:JSON.stringify(v))}catch{}}
+function lsGetJSON(k){try{const r=lsGet(k);return r?JSON.parse(r):null}catch{return null}}
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+window.onload=()=>{
+  const n=lsGet('user-name');
+  if(n){
+    userName=n;
+    document.getElementById('setup').style.display='none';
+    document.getElementById('app').style.display='flex';
+    loadAll();
+  }
+  document.getElementById('name-input').addEventListener('keydown',e=>{if(e.key==='Enter')saveName()});
+};
+
+function loadAll(){
+  profile=lsGetJSON('user-profile')||{};
+  for(const m of Object.keys(MODES)){
+    const saved=lsGetJSON(`msgs-${m}`);
+    if(saved)messages[m]=saved;
+  }
+  applyMode(currentMode);
+  renderChat();
+  updateStats();
+}
+
+function saveName(){
+  const n=document.getElementById('name-input').value.trim();
+  if(!n)return;
+  userName=n;
+  lsSet('user-name',n);
+  document.getElementById('setup').style.display='none';
+  document.getElementById('app').style.display='flex';
+  loadAll();
+}
+
+// ── MODE ──────────────────────────────────────────────────────────────────────
+function applyMode(m){
+  const mode=MODES[m];
+  document.documentElement.style.setProperty('--accent',mode.accent);
+  document.documentElement.style.setProperty('--bg',mode.bg);
+  document.documentElement.style.setProperty('--surface',mode.surface);
+  document.getElementById('app').style.background=mode.bg;
+  document.getElementById('app-title').textContent=`${userName.toUpperCase()}'S AI`;
+  document.getElementById('app-title').style.color=mode.accent;
+  document.getElementById('app-title').style.textShadow=`0 0 20px ${mode.accent}60`;
+  document.getElementById('msg-input').placeholder=mode.placeholder;
+  document.getElementById('mem-title').style.color=mode.accent;
+  document.querySelectorAll('.mode-btn').forEach(b=>{
+    const active=b.dataset.mode===m;
+    b.classList.toggle('active',active);
+    b.style.background=active?`${MODES[b.dataset.mode].accent}18`:'transparent';
+    b.style.borderColor=active?`${MODES[b.dataset.mode].accent}50`:'transparent';
+    b.style.color=active?MODES[b.dataset.mode].accent:'rgba(255,255,255,0.25)';
+    b.style.boxShadow=active?`0 0 15px ${MODES[b.dataset.mode].accent}20`:'none';
+  });
+  const ta=document.getElementById('msg-input');
+  ta.style.borderColor=ta.value?`${mode.accent}45`:'rgba(255,255,255,0.07)';
+}
+
+function switchMode(m){
+  if(m===currentMode)return;
+  const area=document.getElementById('chat-area');
+  area.style.opacity='0';
+  setTimeout(()=>{
+    currentMode=m;
+    applyMode(m);
+    renderChat();
+    area.style.opacity='1';
+  },200);
+}
+
+// ── CHAT ──────────────────────────────────────────────────────────────────────
+function renderChat(){
+  const area=document.getElementById('chat-area');
+  const mode=MODES[currentMode];
+  const msgs=messages[currentMode];
+  area.innerHTML='';
+
+  if(msgs.length===0){
+    const factCount=(profile.facts||[]).length;
+    area.innerHTML=`
+      <div class="empty-state">
+        <div class="empty-emoji">${mode.emoji}</div>
+        <div class="empty-mode" style="color:${mode.accent}55">${mode.label} MODE</div>
+        <div class="empty-tag">${mode.tagline}</div>
+        ${factCount>0?`<div class="mem-badge" style="border:1px solid ${mode.accent}25;color:${mode.accent}80">🧠 I remember ${factCount} things about you</div>`:''}
+      </div>`;
+    return;
+  }
+
+  msgs.forEach(msg=>{
+    const row=document.createElement('div');
+    row.className=`msg-row ${msg.role==='user'?'user':'ai'}`;
+    if(msg.role==='assistant'){
+      row.innerHTML=`
+        <div class="msg-avatar" style="background:${mode.accent}18;border:1px solid ${mode.accent}35">${mode.emoji}</div>
+        <div class="msg-bubble ai" style="background:${mode.surface};border:1px solid rgba(255,255,255,0.06)">${escHtml(msg.content)}</div>`;
+    } else {
+      row.innerHTML=`<div class="msg-bubble user" style="background:${mode.accent}22;border:1px solid ${mode.accent}40;color:#fff">${escHtml(msg.content)}</div>`;
+    }
+    area.appendChild(row);
+  });
+
+  if(isLoading){
+    const t=document.createElement('div');
+    t.className='msg-row ai';
+    t.id='typing-indicator';
+    t.innerHTML=`
+      <div class="msg-avatar" style="background:${mode.accent}18;border:1px solid ${mode.accent}35">${mode.emoji}</div>
+      <div class="msg-bubble ai typing" style="background:${mode.surface};border:1px solid rgba(255,255,255,0.06)">
+        ${[0,1,2].map(i=>`<div class="dot" style="background:${mode.accent};animation:bounce 1s ${i*0.15}s infinite"></div>`).join('')}
+      </div>`;
+    area.appendChild(t);
+  }
+  area.scrollTop=area.scrollHeight;
+}
+
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br/>')}
+
+function onInput(el){
+  el.style.height='auto';
+  el.style.height=Math.min(el.scrollHeight,100)+'px';
+  const mode=MODES[currentMode];
+  el.style.borderColor=el.value?`${mode.accent}45`:'rgba(255,255,255,0.07)';
+  const btn=document.getElementById('send-btn');
+  const hasVal=el.value.trim().length>0;
+  btn.style.background=hasVal&&!isLoading?mode.accent:'rgba(255,255,255,0.05)';
+  btn.style.color=hasVal&&!isLoading?'#fff':'rgba(255,255,255,0.2)';
+  btn.style.boxShadow=hasVal&&!isLoading?`0 0 20px ${mode.accent}40`:'none';
+  btn.classList.toggle('active',hasVal&&!isLoading);
+}
+
+function onKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage()}}
+
+async function sendMessage(){
+  const ta=document.getElementById('msg-input');
+  const text=ta.value.trim();
+  if(!text||isLoading)return;
+  ta.value='';ta.style.height='auto';
+  onInput(ta);
+
+  const userMsg={role:'user',content:text};
+  messages[currentMode].push(userMsg);
+  saveMsgs();
+  isLoading=true;
+  renderChat();
+
+  try{
+    const history=messages[currentMode].slice(-30);
+    const memCtx=buildMemCtx();
+    const sysPrompt=MODES[currentMode].system+(userName?` The user's name is ${userName}.`:'')+memCtx;
+
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        system:sysPrompt,
+        messages:history
+      })
+    });
+    const data=await res.json();
+    const reply=data.content?.[0]?.text||'something went wrong 😬';
+    messages[currentMode].push({role:'assistant',content:reply});
+    saveMsgs();
+    extractMemory(text,reply);
+  }catch{
+    messages[currentMode].push({role:'assistant',content:'connection issue 😬 try again?'});
+  }
+  isLoading=false;
+  renderChat();
+  updateStats();
+  document.getElementById('msg-input').focus();
+}
+
+function buildMemCtx(){
+  const p=[];
+  if(profile.about)p.push(`About them: ${profile.about}`);
+  if(profile.goals)p.push(`Their goals: ${profile.goals}`);
+  if(profile.mood)p.push(`Recent mood: ${profile.mood}`);
+  if(profile.facts?.length)p.push(`Key facts: ${profile.facts.join('; ')}`);
+  if(profile.lastTopic)p.push(`Last topic: ${profile.lastTopic}`);
+  return p.length?`\n\n[MEMORY]\n${p.join('\n')}\n[Refer to these naturally when relevant. Never say "as per your profile".]`:'';
+}
+
+async function extractMemory(userMsg,aiReply){
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:300,
+        system:`Extract key personal facts to remember about the user from this conversation. Return ONLY a JSON object with optional fields: "about" (1 sentence who they are), "goals" (their ambitions), "mood" (emotional state), "facts" (array of specific facts like "has a dog named Max"), "lastTopic" (what conversation was about). Only include fields with genuinely new info. Return {} if nothing new. Raw JSON only, no markdown.`,
+        messages:[{role:'user',content:`User: "${userMsg}"\nAI: "${aiReply}"\nExisting facts: ${JSON.stringify(profile.facts||[])}`}]
+      })
+    });
+    const data=await res.json();
+    const raw=data.content?.[0]?.text?.replace(/```json|```/g,'').trim();
+    const extracted=raw?JSON.parse(raw):{};
+    if(Object.keys(extracted).length>0){
+      if(extracted.about)profile.about=extracted.about;
+      if(extracted.goals)profile.goals=extracted.goals;
+      if(extracted.mood)profile.mood=extracted.mood;
+      if(extracted.lastTopic)profile.lastTopic=extracted.lastTopic;
+      if(extracted.facts){
+        const merged=[...new Set([...(profile.facts||[]),...extracted.facts])].slice(-30);
+        profile.facts=merged;
+      }
+      lsSet('user-profile',profile);
+      flashMemory();
+      updateStats();
+      if(currentTab==='memory')renderMemory();
+    }
+  }catch{}
+}
+
+function flashMemory(){
+  const el=document.getElementById('mem-flash');
+  el.style.animation='none';
+  el.offsetHeight; // reflow
+  el.style.animation='memFlash 1.5s ease';
+}
+
+function saveMsgs(){
+  for(const m of Object.keys(MODES)){
+    if(messages[m].length>0)lsSet(`msgs-${m}`,messages[m].slice(-100));
+  }
+}
+
+function clearChat(){
+  messages[currentMode]=[];
+  lsSet(`msgs-${currentMode}`,[]);
+  renderChat();
+  updateStats();
+}
+
+function updateStats(){
+  const totalMsgs=Object.values(messages).reduce((a,b)=>a+b.length,0);
+  const factCount=(profile.facts||[]).length;
+  document.getElementById('stats').textContent=`${factCount} facts · ${totalMsgs} msgs`;
+}
+
+// ── MEMORY TAB ────────────────────────────────────────────────────────────────
+function toggleTab(){
+  const chatArea=document.getElementById('chat-area');
+  const memTab=document.getElementById('memory-tab');
+  const inputArea=document.getElementById('input-area');
+  const btn=document.getElementById('tab-btn');
+  const mode=MODES[currentMode];
+
+  if(currentTab==='chat'){
+    currentTab='memory';
+    chatArea.style.display='none';
+    memTab.style.display='block';
+    inputArea.style.display='none';
+    btn.textContent='CHAT';
+    btn.style.color=mode.accent;
+    btn.style.borderColor=`${mode.accent}50`;
+    renderMemory();
+  } else {
+    currentTab='chat';
+    chatArea.style.display='block';
+    memTab.style.display='none';
+    inputArea.style.display='block';
+    btn.textContent='MEMORY';
+    btn.style.color='rgba(255,255,255,0.3)';
+    btn.style.borderColor='rgba(255,255,255,0.08)';
+  }
+}
+
+function renderMemory(){
+  const container=document.getElementById('mem-content');
+  const mode=MODES[currentMode];
+  const hasData=Object.keys(profile).some(k=>profile[k]&&(Array.isArray(profile[k])?profile[k].length>0:true));
+
+  if(!hasData){
+    container.innerHTML=`
+      <div class="mem-empty">
+        <div class="mem-empty-icon">🧠</div>
+        <div class="mem-empty-text">NO MEMORIES YET<br/>START CHATTING TO BUILD YOUR PROFILE</div>
+      </div>`;
+    return;
+  }
+
+  let html='<div class="mem-cards">';
+  if(profile.about)html+=memCard('ABOUT YOU',profile.about,mode.accent);
+  if(profile.mood)html+=memCard('RECENT VIBE',profile.mood,mode.accent);
+  if(profile.goals)html+=memCard('YOUR GOALS',profile.goals,mode.accent);
+  if(profile.lastTopic)html+=memCard('LAST TALKED ABOUT',profile.lastTopic,mode.accent);
+  if(profile.facts?.length){
+    html+=`<div class="mem-card">
+      <div class="mem-card-label" style="color:${mode.accent}">KNOWN FACTS</div>
+      <div class="facts-list">
+        ${profile.facts.map(f=>`<div class="fact-item"><span style="color:${mode.accent};margin-right:8px">→</span>${escHtml(f)}</div>`).join('')}
+      </div>
+    </div>`;
+  }
+  html+='</div>';
+  container.innerHTML=html;
+}
+
+function memCard(label,value,accent){
+  return `<div class="mem-card">
+    <div class="mem-card-label" style="color:${accent}">${label}</div>
+    <div class="mem-card-val">${escHtml(value)}</div>
+  </div>`;
+}
+
+function clearMemory(){
+  profile={};
+  lsSet('user-profile',{});
+  renderMemory();
+  updateStats();
+}
+</script>
+</body>
+</html>
